@@ -11,7 +11,7 @@
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-init(Args) ->
+init([]) ->
 	{ok, #node_state{}}.
 
 handle_call(_Request, _From, State) ->
