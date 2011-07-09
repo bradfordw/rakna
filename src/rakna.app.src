@@ -8,5 +8,7 @@
                   stdlib
                  ]},
   {mod, { rakna_app, []}},
-  {env, []}
+  {env, [
+		{rakna_leveldb_path, "/tmp/rakna.ldb"}
+	]}
  ]}.

@@ -1,35 +1,77 @@
 -module(rakna_counter).
--behaviour(gen_fsm).
--define(SERVER, ?MODULE).
+
+-behaviour(gen_server).
 
 -export([start_link/0]).
 
--export([init/1, state_name/2, state_name/3, handle_event/3, handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+
+-record(counter_state, {level_ref}).
 
 start_link() ->
-  gen_fsm:start_link({local, ?SERVER}, ?MODULE, [], []).
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-init(_Args) ->
-  {ok, initial_state_name, initial_state}.
+init([]) ->
+	{ok, LevelDbPath} = application:get_env(rakna_leveldb_path),
+	{ok, Ref} = open(LevelDbPath, [{create_if_missing, true}]),
+	{ok, #counter_state{level_ref = Ref}}.
 
-state_name(_Event, State) ->
-  {next_state, state_name, State}.
+handle_call({incr, Key}, _From, State) ->
+	incr(Key, State#counter_state.level_ref);
+handle_call({incr, Date, Key}, _From, State) ->
+	incr(Date, Key, State#counter_state.level_ref);
+handle_call({incrby, Key, Amount}, _From, State) ->
+	incrby(Key, Amount, State#counter_state.level_ref);
+handle_call({incrby, Date, Key, Amount}, _From, State) ->
+	incrby(Date, Key, Amount, State#counter_state.level_ref);
+handle_call(_Request, _From, State) ->
+	{noreply, ok, State}.
 
-state_name(_Event, _From, State) ->
-  {reply, ok, state_name, State}.
+handle_cast({incr, Key}, State) ->
+	incr(Key, State#counter_state.level_ref);
+handle_cast({incr, Date, Key}, State) ->
+	incr(Date, Key, State#counter_state.level_ref);
+handle_cast({incrby, Key, Amount}, State) ->
+	incrby(Key, Amount, State#counter_state.level_ref);
+handle_cast({incrby, Date, Key, Amount}, State) ->
+	incrby(Date, Key, Amount, State#counter_state.level_ref);
+handle_cast(_Msg, State) ->
+	{noreply, State}.
 
-handle_event(_Event, StateName, State) ->
-  {next_state, StateName, State}.
+handle_info(_Info, State) ->
+	{noreply, State}.
 
-handle_sync_event(_Event, _From, StateName, State) ->
-  {reply, ok, StateName, State}.
+terminate(_Reason, _State) ->
+	ok.
 
-handle_info(_Info, StateName, State) ->
-  {next_state, StateName, State}.
+code_change(_OldVsn, State, _Extra) ->
+	{ok, State}.
 
-terminate(_Reason, _StateName, _State) ->
-  ok.
+%% Internal Functions %%
 
-code_change(_OldVsn, StateName, State, _Extra) ->
-  {ok, StateName, State}.
+incr(Key, Ref) ->
+	incr(date(), Key, 1, Ref).
 
+incr(Date, Key, Amount, Ref) ->
+%% TODO: use sext on {Date, Key} to make eleveldb happier (sequential keys)
+	BinKey = term_to_binary({Date, Key}),
+	{ok, CurrentValue} = get(Ref, BinKey),
+	NewValue = Current + Amount,
+	ok = eleveldb:put(Ref, BinKey, NewValue, []).
+
+decr(Key, Ref) ->
+	decr(date(), Key, 1, Ref).
+
+decr(Date, Key, Amount, Ref) ->
+%% TODO: use sext on {Date, Key} ... 
+	BinKey = term_to_binary({Date, Key}),
+	{ok, CurrentValue} = get(Ref, BinKey),
+	NewValue = Current + Amount,
+	ok = eleveldb:put(Ref, BinKey, NewValue, []).
+
+get(Ref, Key) ->
+	case eleveldb:get(Ref, BinKey, []) of
+		{ok, V} ->
+			{ok, V};
+		_ -> {ok, 0}
+	end.
