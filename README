@@ -4,21 +4,18 @@ Table of Contents
 2 Quick Start 
     2.1 Building Räkna
     2.2 Starting Räkna
-    2.3 REST API 
-3 Node Management 
-    3.1 Starting
-    3.2 Stopping
+    2.3 Räkna's REST API 
+
 
 1 Räkna 
 ~~~~~~~~~~~
-Räkna (wreck nah {according to Google Translate}) - you count on it!
-
-Räkna is intended to be a time-series based, distributed, incremental/decremental counting mechanism with support for integers and floats.
+Räkna, pronounced: "wreck nah" according to Google's English->Swedish translation, is intended to be a time-series based, (soon-to-be) distributed, incremental/decremental 
+counting mechanism with support for integers and floats.
 
 What's under the hood? Aside from the rushed API for spawnfest? Basho's eleveldb storage for persistent data for starters.
 
 2 Quick Start
 ~~~~~~~~~~~
-
-3 Node Management
-~~~~~~~~~~~
+	2.1 Building Räkna
+	2.2 Starting Räkna
+	2.3 Räkna REST API
