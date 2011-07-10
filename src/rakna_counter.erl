@@ -2,6 +2,7 @@
 
 -behaviour(gen_server).
 
+% synchronous exports
 -export([start_link/0, 
 	get_counter/1,
 	get_counter/2,
@@ -13,14 +14,25 @@
 	decrement/3
 ]).
 
+% asynchronous exports
+-export([a_increment/1,
+  a_increment/2,
+	a_increment/3,
+	a_decrement/1,
+	a_decrement/2,
+	a_decrement/3
+]).
+
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(counter_state, {level_ref}).
 
 %% API
+
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+%% synchronous API
 get_counter(Key) when is_binary(Key) ->
 	gen_server:call(?MODULE, {get, Key}).
 
@@ -60,6 +72,41 @@ decrement(Date, Key, Amount) when is_integer(Amount) ->
 	decrement(Date, Key, FloatAmt);
 decrement(Date, Key, Amount) when is_float(Amount) ->
 	gen_server:call(?MODULE, {decrby, Date, Key, Amount}).
+
+%% asynchronous API
+a_increment(Key) ->
+	gen_server:cast(?MODULE, {incr, Key}).
+
+a_increment(Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	a_increment(Key, FloatAmt);
+a_increment(Key, Amount) when is_float(Amount) ->
+	gen_server:cast(?MODULE, {incrby, date(), Key, Amount});
+a_increment(Date, Key) ->
+	gen_server:cast(?MODULE, {incr, Date, Key}).
+
+a_increment(Date, Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	a_increment(Date, Key, FloatAmt);
+a_increment(Date, Key, Amount) when is_float(Amount) ->
+	gen_server:cast(?MODULE, {incrby, Date, Key, Amount}).
+
+a_decrement(Key) ->
+	gen_server:cast(?MODULE, {decr, Key}).
+
+a_decrement(Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	a_decrement(Key, FloatAmt);
+a_decrement(Key, Amount) when is_float(Amount) ->
+	gen_server:cast(?MODULE, {decrby, date(), Key, Amount});
+a_decrement(Date, Key) ->
+	gen_server:cast(?MODULE, {decr, Date, Key}).
+
+a_decrement(Date, Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	a_decrement(Date, Key, FloatAmt);
+a_decrement(Date, Key, Amount) when is_float(Amount) ->
+	gen_server:cast(?MODULE, {decrby, Date, Key, Amount}).
 
 %% gen_server exports
 init([]) ->
@@ -102,6 +149,30 @@ handle_call({decrby, Date, Key, Amount}, _From, State) ->
 handle_call(_Request, _From, State) ->
 	{noreply, ok, State}.
 
+handle_cast({incr, Key}, State) ->
+  incr(Key, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({incr, Date, Key}, State) ->
+	incr(Date, Key, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({incrby, Key, Amount}, State) ->
+	incr(Key, Amount, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({incrby, Date, Key, Amount}, State) ->
+	incr(Date, Key, Amount, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({decr, Key}, State) ->
+	decr(Key, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({decr, Date, Key}, State) ->
+	decr(Date, Key, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({decrby, Key, Amount}, State) ->
+	decr(Key, Amount, State#counter_state.level_ref),
+	{noreply, State};
+handle_cast({decrby, Date, Key, Amount}, State) ->
+	decr(Date, Key, Amount, State#counter_state.level_ref),
+	{noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
