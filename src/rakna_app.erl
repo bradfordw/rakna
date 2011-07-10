@@ -10,7 +10,8 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    rakna_sup:start_link().
+  rakna_sup:start_link(),
+  rakna_web_sup:start_link().
 
 stop(_State) ->
     ok.

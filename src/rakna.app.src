@@ -9,6 +9,11 @@
                  ]},
   {mod, { rakna_app, []}},
   {env, [
-		{rakna_leveldb_path, "/tmp/rakna.ldb"}
+		{rakna_leveldb_path, "/tmp/rakna.ldb"},
+		{rakna_web_ip, "127.0.0.1"},
+		{rakna_web_port, 8088},
+		{rakna_web_log_dir, "web/log"},
+		{rakna_web_tcp_backlog, 128},
+		{rakna_web_dispatch, [{["counters", counter], counter_resource, []}]}
 	]}
  ]}.

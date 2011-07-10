@@ -33,6 +33,8 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %% synchronous API
+get_counter(Key) when is_list(Key) ->
+  get_counter(list_to_binary(Key));
 get_counter(Key) when is_binary(Key) ->
 	gen_server:call(?MODULE, {get, Key}).
 
@@ -47,7 +49,7 @@ increment(Key, Amount) when is_integer(Amount) ->
 	increment(Key, FloatAmt);
 increment(Key, Amount) when is_float(Amount) ->
 	gen_server:call(?MODULE, {incrby, date(), Key, Amount});
-increment(Date, Key) ->
+increment(Date, Key) when is_tuple(Date) ->
 	gen_server:call(?MODULE, {incr, Date, Key}).
 
 increment(Date, Key, Amount) when is_integer(Amount) ->
@@ -117,11 +119,11 @@ init([]) ->
 handle_call({get, Key}, _From, State) ->
 	K = term_to_binary({date(), Key}),
 	{ok, CurrentValue} = get(State#counter_state.level_ref, K),
-	{reply, CurrentValue, State};
+	{reply, {ok, CurrentValue}, State};
 handle_call({get, Date, Key}, _From, State) ->
 	K = term_to_binary({Date, Key}),
 	{ok, CurrentValue} = get(State#counter_state.level_ref, K),
-	{reply, CurrentValue, State};
+	{reply, {ok, CurrentValue}, State};
 handle_call({incr, Key}, _From, State) ->
 	R = incr(Key, State#counter_state.level_ref),
 	{reply, R, State};
@@ -190,6 +192,8 @@ code_change(_OldVsn, State, _Extra) ->
 incr(Key, Ref) ->
 	incr(date(), Key, 1.0, Ref).
 
+incr(Date, Key, Ref) when is_tuple(Date) ->
+  incr(Date, Key, 1.0, Ref);
 incr(Key, Amount, Ref) ->
 	incr(date(), Key, Amount, Ref).
 
@@ -221,5 +225,5 @@ get(Ref, Key) ->
 	case eleveldb:get(Ref, BinKey, []) of
 		{ok, V} ->
 			{ok, list_to_float(binary_to_list(V))};
-		_ -> {ok, 0.0}
+		_ -> {ok, 0}
 	end.

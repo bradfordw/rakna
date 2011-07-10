@@ -1,4 +1,3 @@
-
 -module(rakna_sup).
 
 -behaviour(supervisor).
