@@ -12,7 +12,10 @@ Table of Contents
 Räkna, pronounced: "wreck nah" according to Google's English->Swedish translation, is intended to be a time-series based, (soon-to-be) distributed, incremental/decremental 
 counting mechanism with support for integers and floats.
 
-What's under the hood? Aside from the rushed API for spawnfest? Basho's eleveldb storage for persistent data for starters.
+What's under the hood? Aside from the rushed API for spawnfest?
+	eleveldb storage for persistent data for starters.
+	Ulf Wiger's sext library for aiding leveldb with sequential writes (took this trick from the leveldb driver in Riak).
+	webmachine for a rock-solid REST API.
 
 2 Quick Start
 ~~~~~~~~~~~
