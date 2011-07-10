@@ -7,7 +7,10 @@
 	get_counter/2,
 	increment/1,
 	increment/2,
-	increment/3
+	increment/3,
+	decrement/1,
+	decrement/2,
+	decrement/3
 ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -41,6 +44,23 @@ increment(Date, Key, Amount) when is_integer(Amount) ->
 increment(Date, Key, Amount) when is_float(Amount) ->
 	gen_server:call(?MODULE, {incrby, Date, Key, Amount}).
 
+decrement(Key) ->
+	gen_server:call(?MODULE, {decr, Key}).
+
+decrement(Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	decrement(Key, FloatAmt);
+decrement(Key, Amount) when is_float(Amount) ->
+	gen_server:call(?MODULE, {decrby, date(), Key, Amount});
+decrement(Date, Key) ->
+	gen_server:call(?MODULE, {decr, Date, Key}).
+
+decrement(Date, Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	decrement(Date, Key, FloatAmt);
+decrement(Date, Key, Amount) when is_float(Amount) ->
+	gen_server:call(?MODULE, {decrby, Date, Key, Amount}).
+
 %% gen_server exports
 init([]) ->
 	{ok, LevelDbPath} = application:get_env(rakna_leveldb_path),
@@ -66,6 +86,18 @@ handle_call({incrby, Key, Amount}, _From, State) ->
 	{reply, R, State};
 handle_call({incrby, Date, Key, Amount}, _From, State) ->
 	R = incr(Date, Key, Amount, State#counter_state.level_ref),
+	{reply, R, State};
+handle_call({decr, Key}, _From, State) ->
+	R = decr(Key, State#counter_state.level_ref),
+	{reply, R, State};
+handle_call({decr, Date, Key}, _From, State) ->
+	R = decr(Date, Key, State#counter_state.level_ref),
+	{reply, R, State};
+handle_call({decrby, Key, Amount}, _From, State) ->
+	R = decr(Key, Amount, State#counter_state.level_ref),
+	{reply, R, State};
+handle_call({decrby, Date, Key, Amount}, _From, State) ->
+	R = decr(Date, Key, Amount, State#counter_state.level_ref),
 	{reply, R, State};
 handle_call(_Request, _From, State) ->
 	{noreply, ok, State}.
@@ -97,17 +129,18 @@ incr(Date, Key, Amount, Ref) ->
 	NewValue = list_to_binary(NV),
 	ok = eleveldb:put(Ref, BinKey, NewValue, []).
 
-% decr(Key, Ref) ->
-% 	decr(date(), Key, 1.0, Ref).
-% 
-% decr(Key, Amount, Ref) ->
-% 	decr(date(), Key, Amount, Ref).
-% 
-% decr(Date, Key, Amount, Ref) ->
-% 	BinKey = term_to_binary({Date, Key}),
-% 	{ok, CurrentValue} = get(Ref, BinKey),
-% 	NewValue = CurrentValue + Amount,
-% 	ok = eleveldb:put(Ref, BinKey, NewValue, []).
+decr(Key, Ref) ->
+	decr(date(), Key, 1.0, Ref).
+
+decr(Key, Amount, Ref) ->
+	decr(date(), Key, Amount, Ref).
+
+decr(Date, Key, Amount, Ref) ->
+	BinKey = term_to_binary({Date, Key}),
+	{ok, CurrentValue} = get(Ref, BinKey),
+	NV = float_to_list(CurrentValue - Amount),
+	NewValue = list_to_binary(NV),
+	ok = eleveldb:put(Ref, BinKey, NewValue, []).
 
 get(Ref, Key) ->
 	BinKey = case Key of
