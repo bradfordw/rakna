@@ -12,13 +12,13 @@ init([]) ->
   {ok, []}.
 
 allowed_methods(Req, State) ->
-  {['GET','PUT'], Req, State}.
+  {['GET'], Req, State}.
 
 content_types_provided(Req, Ctx) ->
-	{[{"application/json", get}, {"application/json", put}], Req, Ctx}.
+	{[{"application/json", get}], Req, Ctx}.
 
 content_types_accepted(Req, Ctx) ->
-  {[{"application/json", get}, {"application/json", put}], Req, Ctx}.
+  {[{"application/json", get}], Req, Ctx}.
 
 service_available(Req, Ctx) ->
   Availability = case whereis(rakna_counter) of
