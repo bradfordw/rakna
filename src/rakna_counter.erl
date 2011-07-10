@@ -2,7 +2,13 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, get_counter/1, get_counter/2]).
+-export([start_link/0, 
+	get_counter/1,
+	get_counter/2,
+	increment/1,
+	increment/2,
+	increment/3
+]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
@@ -13,10 +19,27 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 get_counter(Key) when is_binary(Key) ->
-	gen_server:call(rakna_counter, {get, Key}).
+	gen_server:call(?MODULE, {get, Key}).
 
 get_counter(Date, Key) when is_tuple(Date) ->
-	gen_server:call(rakna_counter, {get, Date, Key}).
+	gen_server:call(?MODULE, {get, Date, Key}).
+
+increment(Key) ->
+	gen_server:call(?MODULE, {incr, Key}).
+
+increment(Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	increment(Key, FloatAmt);
+increment(Key, Amount) when is_float(Amount) ->
+	gen_server:call(?MODULE, {incrby, date(), Key, Amount});
+increment(Date, Key) ->
+	gen_server:call(?MODULE, {incr, Date, Key}).
+
+increment(Date, Key, Amount) when is_integer(Amount) ->
+	FloatAmt = (Amount * 1.0),
+	increment(Date, Key, FloatAmt);
+increment(Date, Key, Amount) when is_float(Amount) ->
+	gen_server:call(?MODULE, {incrby, Date, Key, Amount}).
 
 %% gen_server exports
 init([]) ->
@@ -35,18 +58,18 @@ handle_call({get, Date, Key}, _From, State) ->
 handle_call({incr, Key}, _From, State) ->
 	R = incr(Key, State#counter_state.level_ref),
 	{reply, R, State};
+handle_call({incr, Date, Key}, _From, State) ->
+	R = incr(Date, Key, State#counter_state.level_ref),
+	{reply, R, State};
 handle_call({incrby, Key, Amount}, _From, State) ->
 	R = incr(Key, Amount, State#counter_state.level_ref),
+	{reply, R, State};
+handle_call({incrby, Date, Key, Amount}, _From, State) ->
+	R = incr(Date, Key, Amount, State#counter_state.level_ref),
 	{reply, R, State};
 handle_call(_Request, _From, State) ->
 	{noreply, ok, State}.
 
-handle_cast({incr, Key}, State) ->
-	ok = incr(Key, State#counter_state.level_ref),
-	{noreply, State};
-handle_cast({incrby, Key, Amount}, State) ->
-	incr(Key, Amount, State#counter_state.level_ref),
-	{noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
