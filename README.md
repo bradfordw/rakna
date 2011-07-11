@@ -24,9 +24,8 @@ What's under the hood? (aside from the rushed API)
  Basho's eleveldb storage for persistent data for starters.
  Ulf Wiger's sext library for aiding leveldb with sequential writes (took this trick from the leveldb driver in Riak).
  Basho's webmachine for a rock-solid REST API.
- In-directly mochiweb via webmachine for JSON encoding (Hi Bob!)
- And I'm sure there is something from Mr. Virding in here as well...
- See a theme here?
+ Mochiweb via Webmachine for JSON encoding
+
 
 #### 2 Quick Start
 
