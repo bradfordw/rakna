@@ -1,14 +1,15 @@
 Räkna - You Count On It!
 =================
-1 Overview
-2 Quick Start 
+
+#### 1 Overview
+#### 2 Quick Start 
     2.1 Building Räkna
     2.2 Starting Räkna
     2.3 Räkna's REST API 
 
 
-1 Overview
-~~~~~~~~~~~
+#### 1 Overview
+
 
 Räkna, pronounced: "wreck nah" according to Google's English->Swedish translation, is intended to be a time-series based, (soon-to-be) distributed, incremental/decremental 
 counting mechanism with support for integers and floats.
@@ -27,8 +28,8 @@ What's under the hood? (aside from the rushed API)
  And I'm sure there is something from Mr. Virding in here as well...
  See a theme here?
 
-2 Quick Start
-~~~~~~~~~~~
+#### 2 Quick Start
+
 
 	2.1 Building Räkna
 
