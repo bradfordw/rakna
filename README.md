@@ -9,6 +9,7 @@ Räkna - You Count On It!
 
 1 Overview
 ~~~~~~~~~~~
+
 Räkna, pronounced: "wreck nah" according to Google's English->Swedish translation, is intended to be a time-series based, (soon-to-be) distributed, incremental/decremental 
 counting mechanism with support for integers and floats.
 
@@ -28,31 +29,42 @@ What's under the hood? (aside from the rushed API)
 
 2 Quick Start
 ~~~~~~~~~~~
+
 	2.1 Building Räkna
+
 		Via rebar:
 		1. ./rebar get-deps
 		2. ./rebar compile
 		3. ./rebar generate
+
 	2.2 Starting Räkna
+
 		./rel/rakna-node/bin/rakna-node [start|console] (pick either one)
+
 	2.3 Räkna REST API
+
 		Assuming you used the defaults, you can access counters this way:
-		GET http://127.0.0.1:8088/counters/<counter name>
+		GET http://127.0.0.1:8088/counters/[counter name]
 			Be sure to use a Content-Type of: application/json
 			
 	2.4 Räkna Erlang API
+
 		Assuming you are running in a console, or have it loaded via an application:
+
 		Incrementing
+
 		rakna_counter:increment(Key)
 		rakna_counter:increment(Date :: tuple(), Key)
 		rakna_counter:increment(Key, Amount)
 		
 		Decrementing
+
 		rakna_counter:decrement(Key)
 		rakna_counter:decrement(Date :: tuple(), Key)
 		rakna_counter:decrement(Key, Amount)
 		
 		Reading
+
 		rakna_counter:get_counter(Key)
 		rakna_counter:get_counter(Date :: tuple(), Key)
 		
