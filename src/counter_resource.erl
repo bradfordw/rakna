@@ -21,7 +21,7 @@ content_types_accepted(Req, Ctx) ->
   {[{"application/json", get}], Req, Ctx}.
 
 service_available(Req, Ctx) ->
-  Availability = case whereis(rakna_counter) of
+  Availability = case whereis(rakna_node) of
     P when is_pid(P) -> true;
     _ -> false
   end,
@@ -36,7 +36,7 @@ get(Req, Ctx) ->
         D when is_binary(D) -> parse_date(D)
       end,
       CounterName = list_to_binary(Label),
-      {ok, CurrentValue} = rakna_counter:get_counter(Date, CounterName),
+      {ok, CurrentValue} = rakna_node:get_counter(Date, CounterName),
       mochijson2:encode({struct, [
         {<<"name">>, CounterName},
         {<<"total">>, CurrentValue}

@@ -53,19 +53,19 @@ What's under the hood? (aside from the rushed API)
 
 		Incrementing
 
-		rakna_counter:increment(Key)
-		rakna_counter:increment(Date :: tuple(), Key)
-		rakna_counter:increment(Key, Amount)
+		rakna_node:increment(Key)
+		rakna_node:increment(Date :: tuple(), Key)
+		rakna_node:increment(Key, Amount)
 		
 		Decrementing
 
-		rakna_counter:decrement(Key)
-		rakna_counter:decrement(Date :: tuple(), Key)
-		rakna_counter:decrement(Key, Amount)
+		rakna_node:decrement(Key)
+		rakna_node:decrement(Date :: tuple(), Key)
+		rakna_node:decrement(Key, Amount)
 		
 		Reading
 
-		rakna_counter:get_counter(Key)
-		rakna_counter:get_counter(Date :: tuple(), Key)
+		rakna_node:get_counter(Key)
+		rakna_node:get_counter(Date :: tuple(), Key)
 		
 		All increment/decrement functions are synchronous. For asynchronous versions use the a_increment/a_decrement version.
