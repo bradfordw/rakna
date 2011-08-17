@@ -3,7 +3,6 @@
 -behaviour(gen_server).
 -include_lib("eunit/include/eunit.hrl").
 
-% synchronous exports
 -export([start_link/0, start_link/1,  
 	get_counter/2,
 	increment/1,
@@ -15,15 +14,6 @@
 	a_decrement/1,
 	a_decrement/2
 ]).
-
-% asynchronous exports
-% -export([a_increment/1,
-%   a_increment/2,
-%   a_increment/3,
-%   a_decrement/1,
-%   a_decrement/2,
-%   a_decrement/3
-% ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
@@ -129,7 +119,7 @@ eput(Ref, Key, Value, []) ->
   eleveldb:put(Ref, BinKey, term_to_binary(Value), []).
 
 -ifdef(TEST).
-%% Tests
+
 start_test() ->
   os:cmd("rm -rf /tmp/rakna_test.ldb"),
   case whereis(rakna_node) of P
