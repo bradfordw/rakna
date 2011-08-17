@@ -53,19 +53,18 @@ What's under the hood? (aside from the rushed API)
 
 		Incrementing
 
-		rakna_node:increment(Key)
-		rakna_node:increment(Date :: tuple(), Key)
-		rakna_node:increment(Key, Amount)
+		rakna_node:increment(Key) - where Key is the binary label, today's date() will be used.
+		rakna_node:increment({Date :: tuple(), Key})
+		rakna_node:increment({Date :: tuple(), Key}, Amount)
 		
 		Decrementing
 
-		rakna_node:decrement(Key)
-		rakna_node:decrement(Date :: tuple(), Key)
-		rakna_node:decrement(Key, Amount)
+		rakna_node:decrement(Key) - where Key is the binary label, today's date() will be used
+		rakna_node:decrement({Date :: tuple(), Key})
+		rakna_node:decrement({Date :: tuple(), Key}, Amount)
 		
 		Reading
 
-		rakna_node:get_counter(Key)
 		rakna_node:get_counter(Date :: tuple(), Key)
 		
 		All increment/decrement functions are synchronous. For asynchronous versions use the a_increment/a_decrement version.
