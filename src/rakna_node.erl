@@ -149,6 +149,7 @@ a_incr_test() ->
   {D,K} = {date(), <<"test_key">>},
   {ok, Was} = rakna_node:get_counter(D, K),
   rakna_node:a_increment({D, K}),
+  timer:sleep(3600),
   {ok, Is} = rakna_node:get_counter(D, K),
   Is = Was + 1.0,
   {ok, Is}.
@@ -157,8 +158,38 @@ a_decr_test() ->
   {D,K} = {date(), <<"test_key">>},
   {ok, Was} = rakna_node:get_counter(D, K),
   rakna_node:a_decrement({D, K}),
+  timer:sleep(3600),
   {ok, Is} = rakna_node:get_counter(D, K),
   Is = Was - 1.0,
+  {ok, Is}.
+
+incrby_test() ->
+  Amount = 42,
+  {D,K} = {date(), <<"incrby_test_key">>},
+  {ok, Was} = rakna_node:get_counter(D, K),
+  ok = rakna_node:increment({D, K}, Amount),
+  {ok, Is} = rakna_node:get_counter(D, K),
+  Is = Was + Amount,
+  {ok, Is}.
+
+a_incrby_test() ->
+  Amount = 37,
+  {D,K} = {date(), <<"a_incrby_test_key">>},
+  {ok, Was} = rakna_node:get_counter(D, K),
+  rakna_node:a_increment({D, K}, Amount),
+  timer:sleep(3600),
+  {ok, Is} = rakna_node:get_counter(D, K),
+  Is = Was + Amount,
+  {ok, Is}.
+
+a_decrby_test() ->
+  Amount = 18.4,
+  {D,K} = {date(), <<"a_decrby_test_key">>},
+  {ok, Was} = rakna_node:get_counter(D, K),
+  rakna_node:a_decrement({D, K}, Amount),
+  timer:sleep(3600),
+  {ok, Is} = rakna_node:get_counter(D, K),
+  Is = Was - Amount,
   {ok, Is}.
 
 -endif.
