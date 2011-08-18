@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 -include_lib("eunit/include/eunit.hrl").
 
--export([start_link/0, start_link/1,  
+-export([start_link/0, start_link/2,
 	get_counter/2,
 	increment/1,
 	increment/2,
@@ -17,15 +17,16 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--record(counter_state, {level_ref}).
+-record(rkn_state, {ref, options=[]}).
 
 %% API
-start_link(LevelDbPath) ->
-	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath], []).
+start_link(LevelDbPath, []) ->
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath,[]], []).
 
 start_link() ->
   {ok, LevelDbPath} = application:get_env(rakna_leveldb_path),
-	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath], []).
+  {ok, RaknaOptions} = application:get_env(rakna_options),
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath, RaknaOptions], []).
 
 %% synchronous API
 get_counter(Date, Key) ->
@@ -63,27 +64,27 @@ a_decrement({Date, Key}, Amount) when is_number(Amount) ->
 	gen_server:cast(?MODULE, {decr, {Date, Key}, Amount}).
 
 %% gen_server exports
-init([LevelDbPath]) ->
+init([LevelDbPath, Options]) ->
 	{ok, Ref} = eleveldb:open(LevelDbPath, [{create_if_missing, true}]),
-	{ok, #counter_state{level_ref = Ref}}.
+	{ok, #rkn_state{ref = Ref, options = Options}}.
 
 handle_call({get, {Date, Key}}, _From, State) ->
-	{ok, CurrentValue} = eget(State#counter_state.level_ref, {Date, Key}),
+	{ok, CurrentValue} = eget(State#rkn_state.ref, {Date, Key}),
 	{reply, {ok, CurrentValue}, State};
 handle_call({incr, {Date, Key}, Amount}, _From, State) ->
-	R = incr({Date, Key}, Amount, State#counter_state.level_ref),
+	R = incr({Date, Key}, Amount, State#rkn_state.ref),
 	{reply, R, State};
 handle_call({decr, {Date, Key}, Amount}, _From, State) ->
-	R = decr({Date, Key}, Amount, State#counter_state.level_ref),
+	R = decr({Date, Key}, Amount, State#rkn_state.ref),
 	{reply, R, State};
 handle_call(_Request, _From, State) ->
 	{noreply, ok, State}.
 
 handle_cast({incr, {Date, Key}, Amount}, State) ->
-	incr({Date, Key}, Amount, State#counter_state.level_ref),
+	incr({Date, Key}, Amount, State#rkn_state.ref),
 	{noreply, State};
 handle_cast({decr, {Date, Key}, Amount}, State) ->
-	decr({Date, Key}, Amount, State#counter_state.level_ref),
+	decr({Date, Key}, Amount, State#rkn_state.ref),
 	{noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
@@ -125,7 +126,7 @@ start_test() ->
   case whereis(rakna_node) of P
     when is_pid(P) -> ok;
     _ ->
-      {ok, _} = ?MODULE:start_link("/tmp/rakna_test.ldb"),
+      {ok, _} = ?MODULE:start_link("/tmp/rakna_test.ldb",[]),
       ok
   end.
 
