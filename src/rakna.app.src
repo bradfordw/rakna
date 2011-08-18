@@ -15,6 +15,6 @@
 		{rakna_web_log_dir, "web/log"},
 		{rakna_web_tcp_backlog, 128},
 		{rakna_web_dispatch, [{["counters", counter], counter_resource, []}]},
-		{rakna_options, [{aggregates, [min, max, avg, delta, last, first]}]}
+		{rakna_options, [{aggregates, [min, max, delta, last]}]}
 	]}
  ]}.
