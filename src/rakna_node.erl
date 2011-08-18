@@ -5,6 +5,7 @@
 
 -export([start_link/0, start_link/2,
 	get_counter/2,
+	get_counter/3,
 	increment/1,
 	increment/2,
 	a_increment/1,
@@ -33,12 +34,16 @@ start_link() ->
 
 %% synchronous API
 get_counter(Date, Key) ->
-	gen_server:call(?MODULE, {get, {Date, Key}}).
+  gen_server:call(?MODULE, {get, {Date, Key}}).
+get_counter(Date, Key, Aggregates) ->
+  gen_server:call(?MODULE, {get, {Date, Key}, Aggregates}).
 
 increment(Key) when is_binary(Key) ->
   increment({date(), Key});
 increment({Date, Key}) ->
   increment({Date, Key}, 1.0).
+increment(Key, Amount) when is_binary(Key), is_number(Amount) ->
+  increment({date(), Key}, Amount);
 increment({Date, Key}, Amount) when is_number(Amount) ->
 	gen_server:call(?MODULE, {incr, {Date, Key}, Amount}).
 
@@ -47,6 +52,8 @@ decrement(Key) when is_binary(Key) ->
   decrement({date(), Key});
 decrement({Date, Key}) ->
   decrement({Date, Key}, 1.0).
+decrement(Key, Amount) when is_binary(Key), is_number(Amount) ->
+  decrement({date(), Key}, Amount);
 decrement({Date, Key}, Amount) when is_number(Amount) ->
 	gen_server:call(?MODULE, {decr, {Date, Key}, Amount}).
 
@@ -56,6 +63,8 @@ a_increment(Key) when is_binary(Key) ->
   a_increment({date(), Key});
 a_increment({Date, Key}) ->
   a_increment({Date, Key}, 1.0).
+a_increment(Key, Amount) when is_binary(Key), is_number(Amount) ->
+  a_increment({date(), Key}, Amount);
 a_increment({Date, Key}, Amount) when is_number(Amount) ->
 	gen_server:cast(?MODULE, {incr, {Date, Key}, Amount}).
 
@@ -63,6 +72,8 @@ a_decrement(Key) when is_binary(Key) ->
   a_decrement({date(), Key});
 a_decrement({Date, Key}) ->
   a_decrement({Date, Key}, 1.0).
+a_decrement(Key, Amount) when is_binary(Key), is_number(Amount) ->
+  a_decrement({date(), Key}, Amount);
 a_decrement({Date, Key}, Amount) when is_number(Amount) ->
 	gen_server:cast(?MODULE, {decr, {Date, Key}, Amount}).
 
@@ -71,9 +82,15 @@ init([LevelDbPath, Options]) ->
 	{ok, Ref} = eleveldb:open(LevelDbPath, [{create_if_missing, true}]),
 	{ok, #rkn_state{ref=Ref, options=Options}}.
 
-handle_call({get, {Date, Key}, _Aggr}, _From, State) ->
-	{ok, CurrentValue} = eget(State#rkn_state.ref, {Date, Key}),
-	{reply, {ok, CurrentValue}, State};
+handle_call({get, {Date, Key}, Ags}, _From, State) ->
+  {ok, Current} = eget(State#rkn_state.ref, {Date, Key}),
+  Eget = fun(Ref, {_,_,A} = K) ->
+    {ok, Value} = eget(Ref, K),
+    {A, Value}
+  end,
+  R = [Eget(State#rkn_state.ref, {Date, Key, A}) || A <- Ags],
+  Response = R ++ [{current, Current}],
+	{reply, {ok, Response}, State};
 handle_call({get, {Date, Key}}, _From, State) ->
 	{ok, CurrentValue} = eget(State#rkn_state.ref, {Date, Key}),
 	{reply, {ok, CurrentValue}, State};
@@ -150,7 +167,6 @@ options_handler({Date, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) 
       end;
     false -> ok
   end,
-  
   done.
 
 -ifdef(TEST).
