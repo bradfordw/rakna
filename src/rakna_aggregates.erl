@@ -6,8 +6,11 @@
 min({Date, Label}, {_, Current}, Ref) ->
   Key = rakna_options:aggregate_key_for(Date, Label, min),
   {ok, CurMin} = rakna_node:eget(Ref, Key),
-  case Current < CurMin of
-    true -> rakna_node:eput(Ref, Key, Current);
+  case CurMin of
+    0 ->
+      rakna_node:eput(Ref, Key, Current);
+    N when N > Current ->
+      rakna_node:eput(Ref, Key, Current);
     _ -> ok
   end.
 
