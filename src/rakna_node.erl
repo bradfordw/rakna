@@ -16,7 +16,8 @@
 	a_decrement/2,
 	eget/2,
 	eput/3,
-	options_handler/3
+	options_handler/3,
+	get_options/1
 ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -33,11 +34,15 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath, RaknaOptions], []).
 
 %% synchronous API
+get_options(Type) ->
+  gen_server:call(?MODULE, {get_options, Type}).
+
 get_counter(Date, Key) ->
   gen_server:call(?MODULE, {get, {Date, Key}}).
+get_counter(Date, Key, []) ->
+  gen_server:call(?MODULE, {get, {Date, Key}});
 get_counter(Date, Key, Aggregates) ->
   gen_server:call(?MODULE, {get, {Date, Key}, Aggregates}).
-
 increment(Key) when is_binary(Key) ->
   increment({date(), Key});
 increment({Date, Key}) ->
@@ -82,6 +87,17 @@ init([LevelDbPath, Options]) ->
 	{ok, Ref} = eleveldb:open(LevelDbPath, [{create_if_missing, true}]),
 	{ok, #rkn_state{ref=Ref, options=Options}}.
 
+handle_call({get_options, Type}, _From, State) ->
+  O = State#rkn_state.options,
+  Response = case rakna_utils:exists(Type, O) of
+    true ->
+      case proplists:get_value(Type, O) of
+        undefined -> [];
+        P -> P
+      end;
+    _ -> []
+  end,
+  {reply, {ok, Response}, State};
 handle_call({get, {Date, Key}, Ags}, _From, State) ->
   {ok, Current} = eget(State#rkn_state.ref, {Date, Key}),
   Eget = fun(Ref, {_,_,A} = K) ->
@@ -93,7 +109,7 @@ handle_call({get, {Date, Key}, Ags}, _From, State) ->
 	{reply, {ok, Response}, State};
 handle_call({get, {Date, Key}}, _From, State) ->
 	{ok, CurrentValue} = eget(State#rkn_state.ref, {Date, Key}),
-	{reply, {ok, CurrentValue}, State};
+	{reply, {ok, [{current, CurrentValue}]}, State};
 handle_call({incr, {Date, Key}, Amount}, _From, State) ->
   {ok, Previous} = eget(State#rkn_state.ref, {Date, Key}),
 	{ok, Current} = incr({Date, Key}, Amount, State#rkn_state.ref),
@@ -157,7 +173,7 @@ eput(Ref, Key, Value) ->
 %% Our poor-man's event handler for now.
 options_handler({Date, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) ->
   A = aggregates,
-  case rakna_options:exists(A, Opt) of
+  case rakna_utils:exists(A, Opt) of
     true ->
       {value, {A, AggVals}, _} = lists:keytake(A, 1, Opt),
       case AggVals =/= [] of
@@ -182,73 +198,73 @@ start_test() ->
 
 incr_test() ->
   {D,K} = {date(), <<"test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   {ok, _} = rakna_node:increment({D, K}),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was + 1.0,
   {ok, Is}.
 
 decr_test() ->
   {D,K} = {date(), <<"test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   {ok, _} = rakna_node:decrement({D, K}),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was - 1.0,
   {ok, Is}.
 
 a_incr_test() ->
   {D,K} = {date(), <<"test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   rakna_node:a_increment({D, K}),
-  timer:sleep(1200),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  timer:sleep(3600),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was + 1.0,
   {ok, Is}.
 
 a_decr_test() ->
   {D,K} = {date(), <<"test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   rakna_node:a_decrement({D, K}),
-  timer:sleep(1200),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  timer:sleep(3600),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was - 1.0,
   {ok, Is}.
 
 incrby_test() ->
   Amount = 42,
   {D,K} = {date(), <<"incrby_test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   {ok, _} = rakna_node:increment({D, K}, Amount),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was + Amount,
   {ok, Is}.
 
 decrby_test() ->
   Amount = 27,
   {D,K} = {date(), <<"decrby_test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   {ok, _} = rakna_node:decrement({D, K}, Amount),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was - Amount,
   {ok, Is}.
 
 a_incrby_test() ->
   Amount = 37,
   {D,K} = {date(), <<"a_incrby_test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   rakna_node:a_increment({D, K}, Amount),
-  timer:sleep(1200),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  timer:sleep(3600),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was + Amount,
   {ok, Is}.
 
 a_decrby_test() ->
   Amount = 18.4,
   {D,K} = {date(), <<"a_decrby_test_key">>},
-  {ok, Was} = rakna_node:get_counter(D, K),
+  {ok, [{current, Was}]} = rakna_node:get_counter(D, K),
   rakna_node:a_decrement({D, K}, Amount),
-  timer:sleep(1200),
-  {ok, Is} = rakna_node:get_counter(D, K),
+  timer:sleep(3600),
+  {ok, [{current, Is}]} = rakna_node:get_counter(D, K),
   Is = Was - Amount,
   {ok, Is}.
 

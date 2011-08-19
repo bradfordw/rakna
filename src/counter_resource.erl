@@ -30,17 +30,10 @@ service_available(Req, Ctx) ->
 get(Req, Ctx) ->
   Response = case wrq:path_info(counter, Req) of
     Label when is_list(Label) ->
-      Date = case wrq:get_qs_value("date", date(), Req) of
-        D when is_tuple(D) -> D;
-        D when is_list(D) -> parse_date(list_to_binary(D));
-        D when is_binary(D) -> parse_date(D)
-      end,
+      Date = get_date(wrq:get_qs_value("date", date(), Req)),
+      Aggregates = get_aggregates(wrq:get_qs_value("aggregates", [], Req)),
       CounterName = list_to_binary(Label),
-      {ok, CurrentValue} = rakna_node:get_counter(Date, CounterName),
-      mochijson2:encode({struct, [
-        {<<"name">>, CounterName},
-        {<<"total">>, CurrentValue}
-      ]});
+      query_counter(Date, CounterName, Aggregates);
     _ ->
       {halt, 404}
   end,
@@ -59,3 +52,30 @@ parse_date(Date) when is_binary(Date) ->
     <<Y:4/binary,_:1/binary,M:2/binary,_:1/binary,D:2/binary>> ->
       {list_to_integer(binary_to_list(Y)), list_to_integer(binary_to_list(M)), list_to_integer(binary_to_list(D))}
   end.
+
+get_date(Date) ->
+  case Date of
+    D when is_tuple(D) -> D;
+    D when is_list(D) -> parse_date(list_to_binary(D));
+    D when is_binary(D) -> parse_date(D)
+  end.
+
+get_aggregates(Aggregates) ->
+  case Aggregates of
+    [] -> [];
+    A when is_list(A) ->
+      filter_aggregates(string:tokens(A,","));
+    A when is_binary(A) ->
+      filter_aggregates(string:tokens(binary_to_list(A),","))
+  end.
+  
+filter_aggregates(Ags) when is_list(Ags) ->
+  {ok, Opts} = rakna_node:get_options(aggregates),
+  Allowed = [atom_to_list(A) || A <- Opts],
+  Matched = lists:filter(fun(E) -> lists:any(fun(E1) -> E1 =:= E end, Allowed) end, Ags),
+  [list_to_atom(A1) || A1 <- Matched].
+
+query_counter(Date, Label, Aggregates) ->
+  {ok, Result} = rakna_node:get_counter(Date, Label, Aggregates),
+  Json = rakna_utils:aggregates_to_json_list(Result) ++ [{<<"name">>, Label}],
+  mochijson2:encode({struct, Json}).
