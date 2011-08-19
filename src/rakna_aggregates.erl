@@ -8,27 +8,25 @@ min({Date, Label}, {_, Current}, Ref) ->
   {ok, CurMin} = rakna_node:eget(Ref, Key),
   case CurMin of
     0 ->
-      rakna_node:eput(Ref, Key, Current);
+      {put, Key, Current};
     N when N > Current ->
-      rakna_node:eput(Ref, Key, Current);
-    _ -> ok
+      {put, Key, Current};
+    _ -> no_change
   end.
 
 max({Date, Label}, {_, Current}, Ref) ->
   Key = rakna_utils:aggregate_key_for(Date, Label, max),
   {ok, CurMax} = rakna_node:eget(Ref, Key),
   case Current > CurMax of
-    true -> rakna_node:eput(Ref, Key, Current);
-    _ -> ok
+    true -> {put, Key, Current};
+    _ -> no_change
   end.
 
-last({Date, Label}, {Previous, _}, Ref) ->
-  Key = rakna_utils:aggregate_key_for(Date, Label, last),
-  rakna_node:eput(Ref, Key, Previous).
+last({Date, Label}, {Previous, _}, _) ->
+  {put, rakna_utils:aggregate_key_for(Date, Label, last), Previous}.
 
-delta({Date, Label}, {Previous, Current}, Ref) ->
-  Key = rakna_utils:aggregate_key_for(Date, Label, delta),
-  rakna_node:eput(Ref, Key, Current - Previous).
+delta({Date, Label}, {Previous, Current}, _) ->
+  {put, rakna_utils:aggregate_key_for(Date, Label, delta), Current - Previous}.
 
 -ifdef(TEST).
 start_test() ->

@@ -175,17 +175,24 @@ eget(Ref, Key) ->
 
 eput(Ref, Key, Value) ->
   BinKey = sext:encode(Key),
-  eleveldb:put(Ref, BinKey, term_to_binary(Value), []).
+  eleveldb:put(Ref, BinKey, term_to_binary(Value), [{sync, true}]).
+
+ewrite(Ref, Actions) ->
+  eleveldb:write(Ref, Actions, [{sync, true}]).
 
 %% Our poor-man's event handler for now.
 options_handler({Date, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) ->
-  A = aggregates,
-  case rakna_utils:exists(A, Opt) of
+  case rakna_utils:exists(aggregates, Opt) of
     true ->
-      {value, {A, AggVals}, _} = lists:keytake(A, 1, Opt),
+      AggVals = proplists:get_value(aggregates, Opt),
       case AggVals =/= [] of
         true ->
-          [apply(rakna_aggregates, F, [{Date, Key}, {Last, Current}, Ref]) || F <- AggVals];
+          WriteBatch = lists:filter(fun(E) -> 
+            E =/= no_change
+          end,
+          [apply(rakna_aggregates, F, [{Date, Key}, {Last, Current}, Ref]) || F <- AggVals]),
+          WriteBatch1 = lists:map(fun({A, K, V}) -> {A, sext:encode(K), term_to_binary(V)} end, WriteBatch),
+          ewrite(Ref, WriteBatch1);
         false -> ok
       end;
     false -> ok
