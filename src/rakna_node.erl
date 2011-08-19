@@ -17,7 +17,8 @@
 	eget/2,
 	eput/3,
 	options_handler/3,
-	get_options/1
+	get_options/1,
+	leveldb_stats/0
 ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -34,6 +35,9 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath, RaknaOptions], []).
 
 %% synchronous API
+leveldb_stats() ->
+  gen_server:call(?MODULE, leveldb_stats).
+
 get_options(Type) ->
   gen_server:call(?MODULE, {get_options, Type}).
 
@@ -87,6 +91,9 @@ init([LevelDbPath, Options]) ->
 	{ok, Ref} = eleveldb:open(LevelDbPath, [{create_if_missing, true}]),
 	{ok, #rkn_state{ref=Ref, options=Options}}.
 
+handle_call(leveldb_stats, _From, State) ->
+	R = eleveldb:status(State#rkn_state.ref, <<"leveldb.stats">>),
+  {reply, R, State};
 handle_call({get_options, Type}, _From, State) ->
   O = State#rkn_state.options,
   Response = case rakna_utils:exists(Type, O) of
