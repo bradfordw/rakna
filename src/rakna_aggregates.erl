@@ -41,4 +41,49 @@ start_test() ->
       ok
   end.
 
+min_test() ->
+  {D, L} = {date(), <<"min_test_key">>},
+  {ok, _} = rakna_node:increment(L),
+  {ok, _} = rakna_node:increment(L, 12),
+  {ok, PList} = rakna_node:get_counter(D, L, [min]),
+  true = rakna_options:exists(min, PList),
+  true = rakna_options:exists(current, PList),
+  1.0 = proplists:get_value(min, PList),
+  13.0 = proplists:get_value(current, PList),
+  ok.
+
+max_test() ->
+  {D, L} = {date(), <<"max_test_key">>},
+  {ok, _} = rakna_node:increment(L),
+  {ok, _} = rakna_node:increment(L, 42),
+  {ok, _} = rakna_node:decrement(L, 1),
+  {ok, PList} = rakna_node:get_counter(D, L, [max]),
+  true = rakna_options:exists(max, PList),
+  true = rakna_options:exists(current, PList),
+  43.0 = proplists:get_value(max, PList),
+  42.0 = proplists:get_value(current, PList),
+  ok.
+
+last_test() ->
+  {D, L} = {date(), <<"last_test_key">>},
+  {ok, _} = rakna_node:increment(L),
+  {ok, _} = rakna_node:increment(L, 15),
+  {ok, PList} = rakna_node:get_counter(D, L, [last]),
+  true = rakna_options:exists(last, PList),
+  true = rakna_options:exists(current, PList),
+  1.0 = proplists:get_value(last, PList),
+  16.0 = proplists:get_value(current, PList),
+  ok.
+
+delta_test() ->
+  {D, L} = {date(), <<"delta_test_key">>},
+  {ok, _} = rakna_node:increment(L),
+  {ok, _} = rakna_node:decrement(L, 15),
+  {ok, PList} = rakna_node:get_counter(D, L, [delta]),
+  true = rakna_options:exists(delta, PList),
+  true = rakna_options:exists(current, PList),
+  -15.0 = proplists:get_value(delta, PList),
+  -14.0 = proplists:get_value(current, PList),
+  ok.
+
 -endif.
