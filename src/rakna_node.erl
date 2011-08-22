@@ -18,7 +18,8 @@
 	eput/3,
 	options_handler/3,
 	get_options/1,
-	leveldb_stats/0
+	leveldb_stats/0,
+	receive_batch/1
 ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -35,56 +36,60 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath, RaknaOptions], []).
 
 %% synchronous API
+receive_batch([]) ->
+  ok;
+receive_batch(Batch) when is_list(Batch) ->
+  gen_server:call(?MODULE, {receive_batch, Batch}).
+
 leveldb_stats() ->
   gen_server:call(?MODULE, leveldb_stats).
 
 get_options(Type) ->
   gen_server:call(?MODULE, {get_options, Type}).
 
-get_counter(Date, Key) ->
-  gen_server:call(?MODULE, {get, {Date, Key}}).
-get_counter(Date, Key, []) ->
-  gen_server:call(?MODULE, {get, {Date, Key}});
-get_counter(Date, Key, Aggregates) ->
-  gen_server:call(?MODULE, {get, {Date, Key}, Aggregates}).
+get_counter(Interval, Key) ->
+  gen_server:call(?MODULE, {get, {Interval, Key}}).
+get_counter(Interval, Key, []) ->
+  gen_server:call(?MODULE, {get, {Interval, Key}});
+get_counter(Interval, Key, Aggregates) ->
+  gen_server:call(?MODULE, {get, {Interval, Key}, Aggregates}).
 increment(Key) when is_binary(Key) ->
   increment({date(), Key});
-increment({Date, Key}) ->
-  increment({Date, Key}, 1.0).
+increment({Interval, Key}) ->
+  increment({Interval, Key}, 1.0).
 increment(Key, Amount) when is_binary(Key), is_number(Amount) ->
   increment({date(), Key}, Amount);
-increment({Date, Key}, Amount) when is_number(Amount) ->
-	gen_server:call(?MODULE, {incr, {Date, Key}, Amount}).
+increment({Interval, Key}, Amount) when is_number(Amount) ->
+	gen_server:call(?MODULE, {incr, {Interval, Key}, Amount}).
 
 % decr
 decrement(Key) when is_binary(Key) ->
   decrement({date(), Key});
-decrement({Date, Key}) ->
-  decrement({Date, Key}, 1.0).
+decrement({Interval, Key}) ->
+  decrement({Interval, Key}, 1.0).
 decrement(Key, Amount) when is_binary(Key), is_number(Amount) ->
   decrement({date(), Key}, Amount);
-decrement({Date, Key}, Amount) when is_number(Amount) ->
-	gen_server:call(?MODULE, {decr, {Date, Key}, Amount}).
-
+decrement({Interval, Key}, Amount) when is_number(Amount) ->
+	gen_server:call(?MODULE, {decr, {Interval, Key}, Amount}).
 
 %% asynchronous API
 a_increment(Key) when is_binary(Key) ->
   a_increment({date(), Key});
-a_increment({Date, Key}) ->
-  a_increment({Date, Key}, 1.0).
+a_increment({Interval, Key}) ->
+  a_increment({Interval, Key}, 1.0).
 a_increment(Key, Amount) when is_binary(Key), is_number(Amount) ->
   a_increment({date(), Key}, Amount);
-a_increment({Date, Key}, Amount) when is_number(Amount) ->
-	gen_server:cast(?MODULE, {incr, {Date, Key}, Amount}).
+a_increment({Interval, Key}, Amount) when is_number(Amount) ->
+	gen_server:cast(?MODULE, {incr, {Interval, Key}, Amount}).
 
 a_decrement(Key) when is_binary(Key) ->
   a_decrement({date(), Key});
-a_decrement({Date, Key}) ->
-  a_decrement({Date, Key}, 1.0).
+a_decrement({Interval, Key}) ->
+  a_decrement({Interval, Key}, 1.0).
 a_decrement(Key, Amount) when is_binary(Key), is_number(Amount) ->
   a_decrement({date(), Key}, Amount);
-a_decrement({Date, Key}, Amount) when is_number(Amount) ->
-	gen_server:cast(?MODULE, {decr, {Date, Key}, Amount}).
+a_decrement({Interval, Key}, Amount) when is_number(Amount) ->
+	gen_server:cast(?MODULE, {decr, {Interval, Key}, Amount}).
 
 %% gen_server exports
 init([LevelDbPath, Options]) ->
@@ -105,41 +110,47 @@ handle_call({get_options, Type}, _From, State) ->
     _ -> []
   end,
   {reply, {ok, Response}, State};
-handle_call({get, {Date, Key}, Ags}, _From, State) ->
-  {ok, Current} = eget(State#rkn_state.ref, {Date, Key}),
+handle_call({get, {Interval, Key}, Ags}, _From, State) ->
+  {ok, Current} = eget(State#rkn_state.ref, {Interval, Key}),
   Eget = fun(Ref, {_,_,A} = K) ->
     {ok, Value} = eget(Ref, K),
     {A, Value}
   end,
-  R = [Eget(State#rkn_state.ref, {Date, Key, A}) || A <- Ags],
+  R = [Eget(State#rkn_state.ref, {Interval, Key, A}) || A <- Ags],
   Response = R ++ [{current, Current}],
 	{reply, {ok, Response}, State};
-handle_call({get, {Date, Key}}, _From, State) ->
-	{ok, CurrentValue} = eget(State#rkn_state.ref, {Date, Key}),
+handle_call({get, {Interval, Key}}, _From, State) ->
+	{ok, CurrentValue} = eget(State#rkn_state.ref, {Interval, Key}),
 	{reply, {ok, [{current, CurrentValue}]}, State};
-handle_call({incr, {Date, Key}, Amount}, _From, State) ->
-  {ok, Previous} = eget(State#rkn_state.ref, {Date, Key}),
-	{ok, Current} = incr({Date, Key}, Amount, State#rkn_state.ref),
-	options_handler({Date, Key}, {Previous, Current}, State),
+handle_call({incr, {Interval, Key}, Amount}, _From, State) ->
+  {ok, Previous} = eget(State#rkn_state.ref, {Interval, Key}),
+	{ok, Current} = incr({Interval, Key}, Amount, State#rkn_state.ref),
+	options_handler({Interval, Key}, {Previous, Current}, State),
 	{reply, {ok, Current}, State};
-handle_call({decr, {Date, Key}, Amount}, _From, State) ->
-  {ok, Previous} = eget(State#rkn_state.ref, {Date, Key}),
-	{ok, Current} = decr({Date, Key}, Amount, State#rkn_state.ref),
-	options_handler({Date, Key}, {Previous, Current}, State),
+handle_call({decr, {Interval, Key}, Amount}, _From, State) ->
+  {ok, Previous} = eget(State#rkn_state.ref, {Interval, Key}),
+	{ok, Current} = decr({Interval, Key}, Amount, State#rkn_state.ref),
+	options_handler({Interval, Key}, {Previous, Current}, State),
 	{reply, {ok, Current}, State};
+handle_call({receive_batch, Actions}, _From, State) ->
+  ok = ewrite(State#rkn_state.ref, Actions),
+  {reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{noreply, ok, State}.
 
-handle_cast({incr, {Date, Key}, Amount}, State) ->
-  {ok, Previous} = eget(State#rkn_state.ref, {Date, Key}),
-	{ok, Current} = incr({Date, Key}, Amount, State#rkn_state.ref),
-  options_handler({Date, Key}, {Previous, Current}, State),
+handle_cast({incr, {Interval, Key}, Amount}, State) ->
+  {ok, Previous} = eget(State#rkn_state.ref, {Interval, Key}),
+	{ok, Current} = incr({Interval, Key}, Amount, State#rkn_state.ref),
+  options_handler({Interval, Key}, {Previous, Current}, State),
 	{noreply, State};
-handle_cast({decr, {Date, Key}, Amount}, State) ->
-  {ok, Previous} = eget(State#rkn_state.ref, {Date, Key}),
-	{ok, Current} = decr({Date, Key}, Amount, State#rkn_state.ref),
-	options_handler({Date, Key}, {Previous, Current}, State),
+handle_cast({decr, {Interval, Key}, Amount}, State) ->
+  {ok, Previous} = eget(State#rkn_state.ref, {Interval, Key}),
+	{ok, Current} = decr({Interval, Key}, Amount, State#rkn_state.ref),
+	options_handler({Interval, Key}, {Previous, Current}, State),
 	{noreply, State};
+handle_cast({receive_batch, Actions}, State) ->
+  ewrite(State#rkn_state.ref, Actions),
+  {noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -154,16 +165,16 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% Internal Functions %%
 
-incr({Date, Key}, Amount, Ref) ->
-	{ok, CurrentValue} = eget(Ref, {Date, Key}),
+incr({Interval, Key}, Amount, Ref) ->
+	{ok, CurrentValue} = eget(Ref, {Interval, Key}),
 	Value = CurrentValue + Amount,
-	ok = eput(Ref, {Date, Key}, Value),
+	ok = eput(Ref, {Interval, Key}, Value),
 	{ok, Value}.
 
-decr({Date, Key}, Amount, Ref) ->
-	{ok, CurrentValue} = eget(Ref, {Date, Key}),
+decr({Interval, Key}, Amount, Ref) ->
+	{ok, CurrentValue} = eget(Ref, {Interval, Key}),
 	Value = CurrentValue - Amount,
-	ok = eput(Ref, {Date, Key}, Value),
+	ok = eput(Ref, {Interval, Key}, Value),
 	{ok, Value}.
 
 eget(Ref, Key) ->
@@ -181,7 +192,7 @@ ewrite(Ref, Actions) ->
   eleveldb:write(Ref, Actions, [{sync, true}]).
 
 %% Our poor-man's event handler for now.
-options_handler({Date, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) ->
+options_handler({Interval, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) ->
   case rakna_utils:exists(aggregates, Opt) of
     true ->
       AggVals = proplists:get_value(aggregates, Opt),
@@ -190,12 +201,23 @@ options_handler({Date, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) 
           WriteBatch = lists:filter(fun(E) -> 
             E =/= no_change
           end,
-          [apply(rakna_aggregates, F, [{Date, Key}, {Last, Current}, Ref]) || F <- AggVals]),
+          [apply(rakna_aggregates, F, [{Interval, Key}, {Last, Current}, Ref]) || F <- AggVals]),
           WriteBatch1 = lists:map(fun({A, K, V}) -> {A, sext:encode(K), term_to_binary(V)} end, WriteBatch),
+          Payload = WriteBatch1 ++ [{put, Current}],
           ewrite(Ref, WriteBatch1);
-        false -> ok
+        false ->
+          Payload = [{put, Current}],
+          ok
       end;
-    false -> ok
+    false ->
+      Payload = [{put, Current}],
+      ok
+  end,
+  case rakna_utils:exists(nodes, Opt) of
+    false -> ok;
+    [] -> ok;
+    Nodes when is_list(Nodes) ->
+      rpc:multicall(Nodes, rakna_node, receive_batch, [Payload])
   end,
   done.
 
