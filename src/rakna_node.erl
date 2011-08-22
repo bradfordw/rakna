@@ -194,7 +194,7 @@ ewrite(Ref, Actions) ->
 %% Our poor-man's event handler for now.
 options_handler({Interval, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Opt}) ->
   BinCurrent = term_to_binary(Current),
-  SeKey = sext:encode(Key),
+  SeKey = sext:encode({Interval, Key}),
   case rakna_utils:exists(aggregates, Opt) of
     true ->
       AggVals = proplists:get_value(aggregates, Opt),
@@ -221,7 +221,7 @@ options_handler({Interval, Key}, {Last, Current}, #rkn_state{ref=Ref, options=Op
       case proplists:get_value(nodes, Opt) of
         [] -> ok;
         Nodes when is_list(Nodes) ->
-          rpc:multicall(Nodes, rakna_node, receive_batch, [Payload], 60000)
+          rpc:multicall(Nodes, rakna_node, receive_batch, [Payload], 65000)
       end
   end,
   done.
