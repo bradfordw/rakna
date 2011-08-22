@@ -17,7 +17,7 @@
 		{rakna_web_dispatch, [{["counters", counter], counter_resource, []}]},
 		{rakna_options, [
 		                  {aggregates, [min, max, delta, last]},
-											{nodes, []}
+											{nodes, ['rakna2@bradfordw']}
 		                ]}
 	]}
  ]}.
