@@ -16,7 +16,7 @@
 		{rakna_web_tcp_backlog, 128},
 		{rakna_web_dispatch, [{["counters", counter], counter_resource, []}]},
 		{rakna_options, [
-		                  {aggregates, [min, max, delta, last]},
+		                  {aggregates, [min, max, last, delta]},
 											{nodes, []} % add your node names here
 		                ]}
 	]}

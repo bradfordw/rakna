@@ -2,6 +2,7 @@
 
 -behaviour(gen_server).
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("rakna_query.hrl").
 
 -export([start_link/0, start_link/2,
 	get_counter/2,
@@ -19,7 +20,9 @@
 	options_handler/3,
 	get_options/1,
 	leveldb_stats/0,
-	receive_batch/1
+	receive_batch/1,
+	select_all/0,
+	select/1
 ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -36,6 +39,18 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [LevelDbPath, RaknaOptions], []).
 
 %% synchronous API
+select(Predicates) when is_list(Predicates) ->
+  I = proplist:get_value(interval, Predicates, []),
+  L = proplist:get_value(label, Predicates, []),
+  A = proplist:get_value(aggregate, Predicates),
+  V = proplist:get_value(value, Predicates, []),
+  select(#rq_predicate{interval=I, label=L, aggregate=A, value=V});
+select(Predicates) when is_record(Predicates, rq_predicate)->
+  gen_server:call(?MODULE, {select, Predicates}).
+
+select_all() ->
+  gen_server:call(?MODULE, select_all).
+
 receive_batch([]) ->
   ok;
 receive_batch(Batch) when is_list(Batch) ->
@@ -53,6 +68,7 @@ get_counter(Interval, Key, []) ->
   gen_server:call(?MODULE, {get, {Interval, Key}});
 get_counter(Interval, Key, Aggregates) ->
   gen_server:call(?MODULE, {get, {Interval, Key}, Aggregates}).
+
 increment(Key) when is_binary(Key) ->
   increment({date(), Key});
 increment({Interval, Key}) ->
@@ -135,6 +151,12 @@ handle_call({decr, {Interval, Key}, Amount}, _From, State) ->
 handle_call({receive_batch, Actions}, _From, State) ->
   ok = ewrite(State#rkn_state.ref, Actions),
   {reply, ok, State};
+handle_call(select_all, _From, State) ->
+  Results = rakna_query:select_all(State#rkn_state.ref),
+  {reply, Results, State};
+handle_call({select, Predicates}, _From, State) ->
+  Results = rakna_query:select(State#rkn_state.ref, Predicates),
+  {reply, Results, State};
 handle_call(_Request, _From, State) ->
 	{noreply, ok, State}.
 
