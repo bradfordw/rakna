@@ -1,1 +1,1 @@
--record(rq_predicate, {interval=date(), label, aggregate, value}).
+-record(rq_predicate, {interval=date(), label, aggregate=[], value}).
