@@ -54,7 +54,7 @@ label_predicate(Labels) ->
   {ok, case Labels of
     L when is_list(L), L =/= [] ->
       fun(E) -> lists:member(E, L) end;
-    {no_in, L} ->
+    {not_in, L} ->
       fun(E) -> lists:member(E, L) == false end;
     L when is_binary(L), L =/= <<>> ->
       fun(E) -> E == L end;
