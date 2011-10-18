@@ -128,7 +128,17 @@ interval_predicate_test() ->
   ok.
 
 label_predicate_test() ->
-
+  Members = [<<"one">>,<<"two">>],
+  {ok, FTest1} = label_predicate(Members),
+  true = FTest1(hd(Members)),
+  true = FTest1(lists:last(Members)),
+  false = FTest1(<<"three">>),
+  {ok, FTest2} = label_predicate({not_in, Members}),
+  true = FTest2(<<"nope">>),
+  false = FTest2(<<"one">>),
+  {ok, FTest3} = label_predicate(<<"exact">>),
+  true = FTest3(<<"exact">>),
+  false = FTest3(<<"not_exact">>),
   ok.
 
 aggregate_predicate_test() ->
