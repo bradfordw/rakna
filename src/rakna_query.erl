@@ -96,3 +96,46 @@ value_predicate(Values) ->
     _ ->
       fun(_) -> true end
   end}.
+
+-ifdef(TEST).
+
+interval_predicate_test() ->
+  Members = [{2011,10,10},{2011,10,11}],
+  {ok, FTest1} = interval_predicate(Members),
+    true = FTest1(hd(Members)),
+    true = FTest1(lists:last(Members)),
+    false = FTest1({2011,10,12}),
+  Single = {2011,10,9},
+  {ok, FTest2} = interval_predicate(Single),
+    true = FTest2(Single),
+    false = FTest2({2011,10,10}),
+  {ok, FTest3} = interval_predicate(invalid_date),
+    true = FTest3(invalid_date),
+  StartDate = {2011,10,1}, EndDate = {2011,10,31},
+  InRange = {2011,10,15}, OutRange = {2011,11,26},
+  {ok, FTest4} = interval_predicate({between, StartDate, EndDate}),
+    true = FTest4(InRange),
+    false = FTest4(OutRange),
+  {ok, FTest5} = interval_predicate({less_than, EndDate}),
+    true = FTest5(InRange),
+    false = FTest5(OutRange),
+  {ok, FTest6} = interval_predicate({greater_than, EndDate}),
+    true = FTest6(OutRange),
+    false = FTest6(InRange),
+  {ok, FTest7} = interval_predicate({not_in, Members}),
+    true = FTest7({2011, 10, 14}),
+    false = FTest7({2011, 10, 10}),
+  ok.
+
+label_predicate_test() ->
+
+  ok.
+
+aggregate_predicate_test() ->
+
+  ok.
+
+value_predicate_test() ->
+
+  ok.
+-endif.
