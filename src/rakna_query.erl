@@ -127,22 +127,49 @@ interval_predicate_test() ->
     false = FTest7({2011, 10, 10}),
   ok.
 
-label_predicate_test() ->
+label_predicate_is_member_test() ->
   Members = [<<"one">>,<<"two">>],
-  {ok, FTest1} = label_predicate(Members),
-  true = FTest1(hd(Members)),
-  true = FTest1(lists:last(Members)),
-  false = FTest1(<<"three">>),
-  {ok, FTest2} = label_predicate({not_in, Members}),
-  true = FTest2(<<"nope">>),
-  false = FTest2(<<"one">>),
-  {ok, FTest3} = label_predicate(<<"exact">>),
-  true = FTest3(<<"exact">>),
-  false = FTest3(<<"not_exact">>),
+  {ok, FTest} = label_predicate(Members),
+  true = FTest(hd(Members)),
+  true = FTest(lists:last(Members)),
+  false = FTest(<<"three">>),
+  ok.
+label_predicate_not_a_member_test() -> 
+  Members = [<<"one">>,<<"two">>],
+  {ok, FTest} = label_predicate({not_in, Members}),
+  true = FTest(<<"nope">>),
+  false = FTest(<<"one">>),
+  ok.
+label_predicate_exact_test() -> 
+  {ok, FTest} = label_predicate(<<"exact">>),
+  true = FTest(<<"exact">>),
+  false = FTest(<<"not_exact">>),
   ok.
 
-aggregate_predicate_test() ->
-
+aggregate_predicate_member_test() ->
+  Members = [min, max],
+  {ok, FTest} = aggregate_predicate(Members),
+  true = FTest(hd(Members)),
+  true = FTest(lists:last(Members)),
+  false = FTest(last),
+  ok.
+aggregate_predicate_empty_list_test() ->
+  {ok, FTest} = aggregate_predicate([]),
+  false = FTest(<<"foo">>),
+  ok.
+aggregate_predicate_invalid_aggregate_test() ->
+  {ok, FTest} = aggregate_predicate(invalid),
+  false = FTest(<<"bar">>),
+  ok.
+aggregate_predicate_exact_test() ->
+  {ok, FTest} = aggregate_predicate(delta),
+  true = FTest(delta),
+  false = FTest(max),
+  ok.
+aggregate_predicate_all_test() ->
+  {ok, FTest} = aggregate_predicate(all),
+  true = FTest(min), true = FTest(max),
+  true = FTest(delta), true = FTest(last),
   ok.
 
 value_predicate_test() ->
