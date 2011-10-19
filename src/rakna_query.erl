@@ -99,29 +99,45 @@ value_predicate(Values) ->
 
 -ifdef(TEST).
 
-interval_predicate_test() ->
+interval_predicate_member_test() ->
   Members = [{2011,10,10},{2011,10,11}],
   {ok, FTest1} = interval_predicate(Members),
     true = FTest1(hd(Members)),
     true = FTest1(lists:last(Members)),
     false = FTest1({2011,10,12}),
+  ok.
+interval_predicate_exact_test() ->
   Single = {2011,10,9},
   {ok, FTest2} = interval_predicate(Single),
     true = FTest2(Single),
     false = FTest2({2011,10,10}),
+  ok.
+interval_predicate_invalid_test() ->
   {ok, FTest3} = interval_predicate(invalid_date),
     true = FTest3(invalid_date),
+  ok.
+interval_predicate_between_test() ->
   StartDate = {2011,10,1}, EndDate = {2011,10,31},
   InRange = {2011,10,15}, OutRange = {2011,11,26},
   {ok, FTest4} = interval_predicate({between, StartDate, EndDate}),
     true = FTest4(InRange),
     false = FTest4(OutRange),
+  ok.
+interval_predicate_less_than_test() ->
+  EndDate = {2011,10,31}, InRange = {2011,10,15}, OutRange = {2011,11,26},
   {ok, FTest5} = interval_predicate({less_than, EndDate}),
     true = FTest5(InRange),
     false = FTest5(OutRange),
+  ok.
+interval_predicate_greater_than_test() ->
+  EndDate = {2011,10,31},
+  InRange = {2011,10,15}, OutRange = {2011,11,26},
   {ok, FTest6} = interval_predicate({greater_than, EndDate}),
     true = FTest6(OutRange),
     false = FTest6(InRange),
+  ok.
+interval_predicate_not_in_test() ->
+  Members = [{2011,10,10},{2011,10,11}],
   {ok, FTest7} = interval_predicate({not_in, Members}),
     true = FTest7({2011, 10, 14}),
     false = FTest7({2011, 10, 10}),
@@ -172,7 +188,56 @@ aggregate_predicate_all_test() ->
   true = FTest(delta), true = FTest(last),
   ok.
 
-value_predicate_test() ->
-
+value_predicate_member_test() ->
+  Members = [14,15,16.7],
+  {ok, FTest}  = value_predicate(Members),
+  true = FTest(hd(Members)),
+  false = FTest(42),
   ok.
+value_predicate_greater_than_test() ->
+  In = 70,
+  {ok, FTest} = value_predicate({greater_than, In}),
+  true = FTest(80),
+  false = FTest(17),
+  ok.
+value_predicate_less_than_test() ->
+  In = 70,
+  {ok, FTest} = value_predicate({less_than, In}),
+  true = FTest(17),
+  false = FTest(80),
+  ok.
+value_predicate_greater_than_eq_test() ->
+  In = 70,
+  {ok, FTest} = value_predicate({greater_than_eq, In}),
+  true = FTest(80),
+  true = FTest(In),
+  false = FTest(17),
+  ok.
+value_predicate_less_than_eq_test() ->
+  In = 70,
+  {ok, FTest} = value_predicate({less_than_eq, In}),
+  true = FTest(In),
+  false = FTest(80),
+  true = FTest(17),
+  ok.
+value_predicate_exact_test() ->
+  In = 27,
+  {ok, FTest} = value_predicate(In),
+  true = FTest(27),
+  false = FTest(26),
+  ok.
+value_predicate_empty_list_test() ->
+  {ok, FTest} = value_predicate([]),
+  true = FTest(1),
+  true = FTest(2),
+  ok.
+value_predicate_between_test() ->
+  {ok, FTest} = value_predicate({between, 1, 10}),
+  true = FTest(1),
+  true = FTest(10),
+  true = FTest(5),
+  false = FTest(0),
+  false = FTest(11),
+  ok.
+
 -endif.
